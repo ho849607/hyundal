@@ -60,16 +60,16 @@ adb shell am start -n com.hyundai.pleos.drivecheck/.MainActivity
 ```
 
 ### 에뮬레이터 시나리오 바로가기 (Intent Extra 지원)
-데모 및 테스트 자동화를 위해 `scenario` 문자열 extra로 특정 상태 화면을 즉시 재현할 수 있습니다.
+데모 및 테스트 자동화를 위해 `demo_step` 문자열 extra로 특정 상태 화면을 즉시 재현할 수 있습니다.
 ```powershell
 # 대표 시나리오: 동승 아동 위기 신고 확인 화면
-adb shell am start -n com.hyundai.pleos.drivecheck/.MainActivity --es scenario child_report
+adb shell am start -S -n com.hyundai.pleos.drivecheck/.MainActivity --es demo_step child_report
 
 # 119 발신 카운트다운 / 통화 연결 위치 브리핑 / 사고 리포트 / PDF 내보내기 완료
-adb shell am start -n com.hyundai.pleos.drivecheck/.MainActivity --es scenario dial_119
-adb shell am start -n com.hyundai.pleos.drivecheck/.MainActivity --es scenario connected_location
-adb shell am start -n com.hyundai.pleos.drivecheck/.MainActivity --es scenario report
-adb shell am start -n com.hyundai.pleos.drivecheck/.MainActivity --es scenario export_pdf
+adb shell am start -S -n com.hyundai.pleos.drivecheck/.MainActivity --es demo_step dial_119
+adb shell am start -S -n com.hyundai.pleos.drivecheck/.MainActivity --es demo_step connected_location
+adb shell am start -S -n com.hyundai.pleos.drivecheck/.MainActivity --es demo_step report
+adb shell am start -S -n com.hyundai.pleos.drivecheck/.MainActivity --es demo_step export_pdf
 ```
 
 ---
