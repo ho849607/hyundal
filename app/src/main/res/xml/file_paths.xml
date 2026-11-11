@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path
+        name="incident_reports"
+        path="reports/" />
+    <files-path
+        name="incident_files"
+        path="reports/" />
+</paths>

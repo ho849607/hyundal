@@ -1,0 +1,41 @@
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Files for the ART/Dalvik VM
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle files
+.gradle/
+build/
+app/build/
+
+# Local configuration & secrets (NEVER commit secrets or school PC paths)
+local.properties
+secrets.properties
+*.keystore
+*.jks
+*.env
+.env.*
+pleos-credentials.json
+google-services.json
+
+# IntelliJ / Android Studio
+*.iml
+.idea/
+.DS_Store
+*.swp
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Handoff large zip archives
+*.zip
