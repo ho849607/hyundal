@@ -1,5 +1,7 @@
-# Built application files
+# Built application files (allow packaged submission APKs in apk/)
 *.apk
+!apk/
+!apk/*.apk
 *.aab
 *.ap_
 *.dex

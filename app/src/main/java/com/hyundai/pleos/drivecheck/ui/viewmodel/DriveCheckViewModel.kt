@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.hyundai.pleos.drivecheck.data.gateway.*
 import com.hyundai.pleos.drivecheck.data.local.IncidentDatabaseHelper
 import com.hyundai.pleos.drivecheck.data.pdf.IncidentPdfExporter
+import com.hyundai.pleos.drivecheck.data.sdk.ReadState
+import com.hyundai.pleos.drivecheck.data.sdk.VehicleBridge
 import com.hyundai.pleos.drivecheck.domain.gateway.*
 import com.hyundai.pleos.drivecheck.domain.model.*
+import com.hyundai.pleos.drivecheck.domain.planner.MaintenanceRead
 import com.hyundai.pleos.drivecheck.domain.reducer.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,6 +29,7 @@ class DriveCheckViewModel(
     val uiState: StateFlow<DriveCheckUiState> = _uiState.asStateFlow()
 
     private var dbHelper: IncidentDatabaseHelper? = null
+    private var vehicleBridge: VehicleBridge? = null
     private var guardianTimerJob: Job? = null
     private var voiceSimulationJob: Job? = null
 
@@ -51,22 +55,100 @@ class DriveCheckViewModel(
     }
 
     fun attachDatabase(context: Context) {
-        if (dbHelper != null) return
-        val helper = IncidentDatabaseHelper(context.applicationContext)
-        dbHelper = helper
-        val incidentId = _uiState.value.incident.incidentId
-        val loadedEvents = helper.loadEvents(incidentId)
-        val loadedUtterances = helper.loadUtterances(incidentId)
-        val loadedMemos = helper.loadCorrectionMemos(incidentId)
-        val loadedExports = helper.loadExports(incidentId)
-        _uiState.update {
-            it.copy(
-                events = loadedEvents,
-                utterances = loadedUtterances,
-                correctionMemos = loadedMemos,
-                exportedVersions = loadedExports
-            )
+        if (dbHelper == null) {
+            val helper = IncidentDatabaseHelper(context.applicationContext)
+            dbHelper = helper
+            val incidentId = _uiState.value.incident.incidentId
+            val loadedEvents = helper.loadEvents(incidentId)
+            val loadedUtterances = helper.loadUtterances(incidentId)
+            val loadedMemos = helper.loadCorrectionMemos(incidentId)
+            val loadedExports = helper.loadExports(incidentId)
+            _uiState.update {
+                it.copy(
+                    events = loadedEvents,
+                    utterances = loadedUtterances,
+                    correctionMemos = loadedMemos,
+                    exportedVersions = loadedExports
+                )
+            }
         }
+        if (vehicleBridge == null) {
+            val bridge = VehicleBridge(context.applicationContext)
+            vehicleBridge = bridge
+            bridge.open()
+                .onSuccess {
+                    _uiState.update { it.copy(sdkInitLine = "SDK 초기화(Vehicle.initialize): 성공") }
+                }
+                .onFailure { err ->
+                    _uiState.update {
+                        it.copy(sdkInitLine = "SDK 초기화(Vehicle.initialize): 실패 (${VehicleBridge.describeError(err)})")
+                    }
+                }
+        }
+    }
+
+    /**
+     * 1단계: 앞왼쪽 도어 위치 조회로 SDK 연결을 확인합니다.
+     * 실패하면 다른 메서드를 호출하지 않고 오류만 표시합니다.
+     */
+    fun checkDoorLinkOnly() {
+        val bridge = vehicleBridge
+        if (bridge == null) {
+            _uiState.update { it.copy(sdkDoorLine = "앞왼쪽 도어 위치 조회: VehicleBridge 미초기화") }
+            return
+        }
+        _uiState.update { it.copy(sdkDoorLine = "앞왼쪽 도어 위치 조회: 요청함, 응답 대기") }
+        bridge.readFrontLeftDoor(
+            onPosition = { pos ->
+                _uiState.update {
+                    it.copy(
+                        sdkDoorLine = "앞왼쪽 도어 위치 조회: 응답 받음, 값 = $pos (연결 확인용, 정비 상태와 무관)"
+                    )
+                }
+            },
+            onFailed = { err ->
+                _uiState.update {
+                    it.copy(
+                        sdkDoorLine = "앞왼쪽 도어 위치 조회: 실패 (${VehicleBridge.describeError(err)})"
+                    )
+                }
+            }
+        )
+    }
+
+    /**
+     * 2단계: 도어 연결 확인 후 카탈로그의 typed API를 순서대로 조회합니다.
+     * - 차량 주행 정보: 누적 주행거리
+     * - 차량 안전 상태: 타이어 공기압, 경고등
+     * - EV 및 연료: 배터리 잔량
+     */
+    fun readCatalogTypedApisSequentially() {
+        val bridge = vehicleBridge ?: return
+        bridge.readOdometerKm { odoState ->
+            _uiState.update {
+                it.copy(maintenanceRead = it.maintenanceRead.copy(odometerKm = odoState))
+            }
+            bridge.readLowTirePressure { tireState ->
+                _uiState.update {
+                    it.copy(maintenanceRead = it.maintenanceRead.copy(tirePressure = tireState))
+                }
+                bridge.readWarningLamps { lampState ->
+                    _uiState.update {
+                        it.copy(maintenanceRead = it.maintenanceRead.copy(warningLamps = lampState))
+                    }
+                    bridge.readBatterySocPercent { socState ->
+                        _uiState.update {
+                            it.copy(maintenanceRead = it.maintenanceRead.copy(batterySocPercent = socState))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        vehicleBridge?.close()
+        super.onCleared()
     }
 
     fun dispatch(action: IncidentAction) {

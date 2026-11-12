@@ -128,7 +128,7 @@ class DefaultVehicleStateSource : VehicleStateSource {
         }
 
         val hasPleosVehicleSdk = try {
-            Class.forName("ai.pleos.sdk.vehicle.Vehicle")
+            Class.forName("ai.pleos.playground.vehicle.Vehicle")
             true
         } catch (_: Throwable) {
             false

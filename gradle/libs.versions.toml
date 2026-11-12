@@ -9,6 +9,9 @@ coroutines = "1.9.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
+# 시작 문서와 공식 샘플 gradle이 가리키는 버전(2.3.1) 대신 Nexus maven-metadata.xml이 실제로 제공하는 2.3.2로 설정합니다.
+vehicleSdk = "2.3.2"
+naviHelper = "3.0.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +32,8 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+vehicle-sdk = { module = "ai.pleos.playground:Vehicle", version.ref = "vehicleSdk" }
+navi-helper = { module = "ai.pleos.playground:NaviHelper", version.ref = "naviHelper" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

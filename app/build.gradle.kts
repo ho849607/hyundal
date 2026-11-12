@@ -50,6 +50,8 @@ android {
 dependencies {
     // Drop-in support for Pleos Connect SDK .aar/.jar files placed in app/libs/
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
+    implementation(libs.vehicle.sdk)
+    implementation(libs.navi.helper)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

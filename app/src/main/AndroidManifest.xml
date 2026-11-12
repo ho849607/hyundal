@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Standard Android permissions for speech & location fallback -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-
-    <!-- Documented Pleos Connect SDK & AAOS read-only permissions (HMG_Pleos_Integration.md) -->
+    <!-- 조회만. 제어 퍼미션은 Playground Console 승인 전에 추가하지 않습니다. -->
+    <uses-permission android:name="pleos.car.permission.CAR_MILEAGE" />
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
-    <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
-    <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
-    <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
-    <uses-permission android:name="android.car.permission.CAR_SPEED" />
-    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+    <uses-permission android:name="pleos.car.permission.CAR_TIRES" />
+    <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
+    <uses-permission android:name="pleos.car.permission.CAR_INFO" />
+    <!-- SDK 연결 확인(앞왼쪽 도어 위치 조회) 전용 -->
+    <uses-permission android:name="pleos.car.permission.CAR_DOORS" />
 
     <!-- Optional automotive feature so APK installs on both Pleos AAOS and standard Android AVDs -->
     <uses-feature
@@ -41,7 +38,7 @@
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="unspecified"
             android:theme="@style/Theme.DriveCheck">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

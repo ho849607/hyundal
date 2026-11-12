@@ -16,14 +16,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hyundai.pleos.drivecheck.R
 import com.hyundai.pleos.drivecheck.domain.model.*
+import com.hyundai.pleos.drivecheck.domain.planner.MaintenancePlanner
 import com.hyundai.pleos.drivecheck.domain.reducer.DriveCheckUiState
 import com.hyundai.pleos.drivecheck.domain.reducer.IncidentAction
 import com.hyundai.pleos.drivecheck.ui.components.*
@@ -36,12 +40,22 @@ fun DriveCheckMainScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isPortraitPhone = configuration.screenWidthDp < configuration.screenHeightDp
     val state by viewModel.uiState.collectAsState()
+    val effectiveState = if (isPortraitPhone && !state.isNarrowWindowMode) {
+        state.copy(isNarrowWindowMode = true)
+    } else {
+        state
+    }
     var showSimControlPanel by remember { mutableStateOf(false) }
     var showSdkStatusDialog by remember { mutableStateOf(false) }
 
+    val isInspection = LocalInspectionMode.current
     LaunchedEffect(Unit) {
-        viewModel.attachDatabase(context)
+        if (!isInspection) {
+            viewModel.attachDatabase(context)
+        }
     }
 
     Box(
@@ -55,32 +69,28 @@ fun DriveCheckMainScreen(
     ) {
         // Main content area: switches between 16:9 full vehicle layout and narrow 1-pane layout (16E)
         Box(
-            modifier = if (state.isNarrowWindowMode) {
+            modifier = if (effectiveState.isNarrowWindowMode) {
                 Modifier
-                    .width(460.dp)
-                    .fillMaxHeight()
-                    .align(Alignment.Center)
-                    .shadow(16.dp, RoundedCornerShape(18.dp))
-                    .clip(RoundedCornerShape(18.dp))
+                    .fillMaxSize()
                     .background(Brush.verticalGradient(listOf(BgVehicleStart, BgVehicleEnd)))
             } else {
                 Modifier.fillMaxSize()
             }
         ) {
-            when (state.phase) {
-                IncidentPhase.IDLE -> IdlePhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.LISTENING -> ListeningPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.CHECK -> CheckPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.RECHECK -> RecheckPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.UNKNOWN -> UnknownDriverPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.OFFER -> PassengerOfferPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.DIAL -> DialingPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.CONNECTED -> ConnectedLocationPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.FALLBACK -> FallbackPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.SAFE_CLOSED -> SafeClosedPhaseView(state = state, viewModel = viewModel)
-                IncidentPhase.GUIDE -> GuidePhaseView(state = state, viewModel = viewModel)
+            when (effectiveState.phase) {
+                IncidentPhase.IDLE -> IdlePhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.LISTENING -> ListeningPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.CHECK -> CheckPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.RECHECK -> RecheckPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.UNKNOWN -> UnknownDriverPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.OFFER -> PassengerOfferPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.DIAL -> DialingPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.CONNECTED -> ConnectedLocationPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.FALLBACK -> FallbackPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.SAFE_CLOSED -> SafeClosedPhaseView(state = effectiveState, viewModel = viewModel)
+                IncidentPhase.GUIDE -> GuidePhaseView(state = effectiveState, viewModel = viewModel)
                 IncidentPhase.RECORD -> RecordPhaseView(
-                    state = state,
+                    state = effectiveState,
                     viewModel = viewModel,
                     onExportPdf = { launchShare ->
                         viewModel.exportAndPreparePdf(context, launchShareChooser = launchShare)
@@ -167,7 +177,7 @@ private fun IdlePhaseView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(start = 32.dp, end = 32.dp, top = 56.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
@@ -2295,8 +2305,37 @@ private fun VehicleSdkTelemetryDialog(
                     color = TextSecondarySlate
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("1. SDK 연결 확인 (Vehicle.initialize → 앞왼쪽 도어 위치 조회)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("• ${state.sdkInitLine}", fontSize = 13.sp)
+                Text("• ${state.sdkDoorLine}", fontSize = 13.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { viewModel.checkDoorLinkOnly() }) {
+                        Text("SDK 연결 확인 (앞왼쪽 도어 위치)", fontSize = 12.sp)
+                    }
+                    OutlinedButton(onClick = { viewModel.readCatalogTypedApisSequentially() }) {
+                        Text("카탈로그 typed API 순차 조회", fontSize = 12.sp)
+                    }
+                }
 
-                Text("1. 주행·브레이크·동력원 상태 (Vehicle.getBrake / CarPropertyManager)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("2. 조회값 (관측 · 차량 SDK 응답 또는 미연결 사유만 표시)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                MaintenancePlanner.describeObservations(state.maintenanceRead).forEach { line ->
+                    Text(line, fontSize = 13.sp)
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("3. 분석 (예측 · 차량이 확정한 사실 아님)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                MaintenancePlanner.describeAnalysis(state.maintenanceRead).forEach { line ->
+                    Text(line, fontSize = 13.sp)
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("4. 이번 단계에서 호출하지 않는 항목", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("• 블루핸즈 길안내: NaviHelper 3.0.5(requestRoute)는 이번 단계에서 호출하지 않으며 아직 연결되지 않음으로 표시", fontSize = 13.sp)
+                Text("• 비상등·문 잠금·창문·공조 제어: CONTROL_ 권한 미신청 상태이므로 이번 단계에서 호출하지 않음", fontSize = 13.sp)
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("5. 주행·브레이크·동력원 상태 (Vehicle.getBrake / CarPropertyManager)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text("• 동력원(Powertrain): ${formatSupportedStatus(v.powertrainState)}", fontSize = 13.sp)
                 Text("• 현재 속도 / 기어: ${v.speedKmh} km/h (단일 0km/h 샘플=${v.isSingleZeroSpeedSample}) / 기어 ${v.gearSelection}", fontSize = 13.sp)
                 Text("• 주차 브레이크 / 페달: 주차브레이크=${if (v.parkingBrakeEngaged) "작동(ON)" else "해제"} / 브레이크페달=${if (v.brakePedalPressed) "밟음" else "해제"}", fontSize = 13.sp)
@@ -2350,5 +2389,37 @@ private fun <T> formatSupportedStatus(status: SupportedFieldStatus<T>): String {
     return when (status) {
         is SupportedFieldStatus.Supported -> "${status.value} [${status.dataOrigin.badgeText}]"
         is SupportedFieldStatus.Unsupported -> "미지원 (${status.reason})"
+    }
+}
+
+@Preview(
+    name = "DriveCheck 모바일/좁은 창 (460x840)",
+    widthDp = 460,
+    heightDp = 840,
+    showBackground = true
+)
+@Composable
+fun DriveCheckMobilePreview() {
+    val vm = remember {
+        DriveCheckViewModel().apply {
+            dispatch(IncidentAction.ToggleNarrowWindow(true))
+        }
+    }
+    DriveCheckTheme {
+        DriveCheckMainScreen(viewModel = vm)
+    }
+}
+
+@Preview(
+    name = "DriveCheck 차량 16:9 화면 (1280x720)",
+    widthDp = 1280,
+    heightDp = 720,
+    showBackground = true
+)
+@Composable
+fun DriveCheckVehiclePreview() {
+    val vm = remember { DriveCheckViewModel() }
+    DriveCheckTheme {
+        DriveCheckMainScreen(viewModel = vm)
     }
 }

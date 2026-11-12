@@ -1,6 +1,7 @@
 package com.hyundai.pleos.drivecheck.domain.reducer
 
 import com.hyundai.pleos.drivecheck.domain.model.*
+import com.hyundai.pleos.drivecheck.domain.planner.MaintenanceRead
 
 /**
  * Complete UI & domain state for DriveCheck (M2).
@@ -34,6 +35,9 @@ data class DriveCheckUiState(
     val medicalCard: MedicalCardInfo = MedicalCardInfo(),
     val contactsConfig: EmergencyContactsConfig = EmergencyContactsConfig(),
     val sdkInspectionReport: String = "Pleos SDK 상태 확인 대기 중",
+    val sdkInitLine: String = "SDK 초기화: 아직 시도 전",
+    val sdkDoorLine: String = "앞왼쪽 도어 위치 조회(연결 확인용): 아직 시도 전",
+    val maintenanceRead: MaintenanceRead = MaintenanceRead(),
     val statusBannerMessage: String = "시연 모드 (모의 데이터 출처 표시 · 실제 119 미발신)"
 ) {
     /**
