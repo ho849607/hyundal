@@ -2,6 +2,10 @@ package com.hyundai.pleos.drivecheck.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -130,7 +134,7 @@ fun DriveCheckMainScreen(
                 modifier = Modifier.clickable { showSimControlPanel = !showSimControlPanel }
             ) {
                 Text(
-                    text = if (showSimControlPanel) "시연 제어판 닫기 ▲" else "시연 제어판 (P0~P2) ▼",
+                    text = if (showSimControlPanel) "시연 제어판 닫기 ▶" else "시연 제어판 (P0~P2) ◀",
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -139,16 +143,20 @@ fun DriveCheckMainScreen(
             }
         }
 
-        // Collapsible simulation & verification drawer
+        // Collapsible right-side simulation & verification drawer
         AnimatedVisibility(
             visible = showSimControlPanel,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(360.dp)
         ) {
             SimulationControlDrawer(
                 state = state,
                 viewModel = viewModel,
+                onClose = { showSimControlPanel = false },
                 onExportPdf = {
                     viewModel.exportAndPreparePdf(context, launchShareChooser = false)
                 }
@@ -2102,39 +2110,84 @@ private fun ExportToggleRow(
 }
 
 /**
- * Interactive Simulation & Verification Drawer at the bottom of the screen for testing all M0~M4 flows.
+ * Interactive Simulation & Verification Drawer sliding from the right for testing all M0~M4 flows.
  */
 @Composable
 private fun SimulationControlDrawer(
     state: DriveCheckUiState,
     viewModel: DriveCheckViewModel,
+    onClose: () -> Unit,
     onExportPdf: () -> Unit
 ) {
     Surface(
-        color = Color(0xF2102533),
-        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-        modifier = Modifier.fillMaxWidth()
+        color = Color(0xF7102533),
+        shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
+        shadowElevation = 16.dp,
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(360.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
-            Text(
-                text = "P0 대표 시연 및 예외 상태 검증 패널 (실제 119 미발신 · 모의 출처 기록)",
-                color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            // Row 1: P0 Core Screens (01..14)
+            // Header with Title & Close button
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "시연 제어판 (P0~P2)",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "실제 119 미발신 · 모의 출처 기록",
+                        color = TextSecondarySlate.copy(alpha = 0.85f),
+                        fontSize = 11.sp
+                    )
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0x33FFFFFF),
+                    modifier = Modifier.clickable(onClick = onClose)
+                ) {
+                    Text(
+                        text = "✕",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = Color(0x22FFFFFF))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Vertically scrollable list of scenario chips
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Text(
+                    text = "📌 P0 대표 시연 (화면 01~14)",
+                    color = ActiveOrangeDot,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                )
+
                 SimChip("01 홈 (03A)") {
                     viewModel.dispatch(IncidentAction.ResetToDemoStart)
                 }
@@ -2179,15 +2232,19 @@ private fun SimulationControlDrawer(
                 SimChip("14 PDF 생성·공유 (21C/21D)") {
                     onExportPdf()
                 }
-            }
 
-            // Row 2: M1/M2 Edge cases, Vehicle states, P1/P2 features
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = Color(0x22FFFFFF))
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "⚙️ M1/M2 예외 및 차량 상태",
+                    color = TextCategoryTeal,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                )
+
                 SimChip("예외: 음성 인식 실패 (16A)") {
                     viewModel.dispatch(IncidentAction.SpeechRecognitionFailed)
                 }
@@ -2244,24 +2301,30 @@ private fun SimulationControlDrawer(
                 SimChip("16E 좁은 창 토글 (${if (state.isNarrowWindowMode) "ON" else "OFF"})") {
                     viewModel.dispatch(IncidentAction.ToggleNarrowWindow(!state.isNarrowWindowMode))
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SimChip(text: String, onClick: () -> Unit) {
+private fun SimChip(
+    text: String,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    onClick: () -> Unit
+) {
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF23475C),
-        modifier = Modifier.clickable(onClick = onClick)
+        color = Color(0xFF1E3C4E),
+        modifier = modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = text,
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)
         )
     }
 }
